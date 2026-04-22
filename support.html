@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>MuvMi Chat - Support</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #f3f4f6; }
+    #chat-area { scroll-behavior: smooth; }
+    .bubble-in { animation: fadeUp 0.2s ease; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    input:disabled { cursor: not-allowed; }
+  </style>
+</head>
+<body class="antialiased">
+
+<div class="mx-auto max-w-[430px] h-screen bg-white shadow-md flex flex-col overflow-hidden">
+
+  <!-- iOS Status Bar -->
+  <div class="flex items-center justify-between px-4 pt-3 pb-1 shrink-0">
+    <span class="text-[17px] font-semibold">9:41</span>
+    <div class="w-20"></div>
+    <div class="flex items-center gap-[5px]">
+      <svg width="17" height="12" viewBox="0 0 17 12" fill="black">
+        <rect x="0" y="7" width="3" height="5" rx="1"/>
+        <rect x="4.5" y="4.5" width="3" height="7.5" rx="1"/>
+        <rect x="9" y="2" width="3" height="10" rx="1"/>
+        <rect x="13.5" y="0" width="3" height="12" rx="1" opacity="0.3"/>
+      </svg>
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="black">
+        <path d="M8 9.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z"/>
+        <path d="M3.5 6.3A6.5 6.5 0 0 1 12.5 6.3" stroke="black" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <path d="M1 3.7A10 10 0 0 1 15 3.7" stroke="black" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      </svg>
+      <svg width="25" height="12" viewBox="0 0 25 12" fill="none">
+        <rect x="0.5" y="0.5" width="21" height="11" rx="3.5" stroke="black" stroke-opacity="0.35"/>
+        <rect x="2" y="2" width="16" height="8" rx="2" fill="black"/>
+        <path d="M23 4v4a2 2 0 0 0 0-4z" fill="black" fill-opacity="0.4"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Navigation Bar -->
+  <div class="flex items-center justify-center relative h-14 border-b border-black/[0.08] shadow-[0px_1px_0px_rgba(0,0,0,0.08)] shrink-0">
+    <button onclick="window.location.href='inbox.html'" class="absolute left-4 flex items-center justify-center w-6 h-6">
+      <svg width="11" height="18" viewBox="0 0 11 18" fill="none">
+        <path d="M9.5 1L1.5 9L9.5 17" stroke="#0D57E2" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <h1 class="text-[20px] font-semibold text-[#4F4F4F] leading-[30px]">Inbox</h1>
+  </div>
+
+  <!-- Tabs -->
+  <div class="flex shrink-0 border-b border-[#E7EEFC]">
+    <button onclick="window.location.href='inbox.html'"
+      class="flex-1 h-[46px] flex items-center justify-center text-[16px] font-semibold tracking-[0.25px] text-[#4F4F4F]">
+      Message
+    </button>
+    <button class="flex-1 h-[46px] flex items-center justify-center text-[16px] font-semibold tracking-[0.25px] text-[#0D57E2] border-b-2 border-[#0D57E2]">
+      Support
+    </button>
+  </div>
+
+  <!-- Chat Area -->
+  <div id="chat-area" class="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4"></div>
+
+  <!-- Input Bar -->
+  <div class="shrink-0 bg-white border-t border-[#E7EEFC] px-3 py-2">
+    <div class="flex items-center gap-2">
+      <button id="menu-btn" onclick="showMainMenu()"
+        class="shrink-0 px-4 py-1 rounded-full text-[14px] font-semibold tracking-[0.25px] bg-[#E7EEFC] border border-[#E7EEFC] text-[#0D57E2] whitespace-nowrap">
+        Menu
+      </button>
+      <input id="text-input" type="text" disabled
+        placeholder="Please select topic above first"
+        class="flex-1 min-w-0 bg-[#EEE] border border-[#909090] rounded-full px-4 py-1 text-[14px] text-[#909090] placeholder-[#909090] outline-none transition-all
+               disabled:bg-[#EEE] disabled:border-[#909090] disabled:text-[#909090]
+               enabled:bg-white enabled:border-[#0D57E2] enabled:text-[#4F4F4F] enabled:placeholder-gray-400"
+        onkeydown="if(event.key==='Enter') sendMessage()" />
+      <button onclick="sendMessage()" class="shrink-0 w-8 h-8 flex items-center justify-center">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="#0D57E2">
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── Data ─────────────────────────────────────────────────────────────────────
+const TOPICS = {
+  "แจ้งลืมของ / สำภาระ": [],   // no sub → enable input directly
+  "แนะนำการใช้งาน": [
+    "วิธีใช้แอป",
+    "พื้นที่ และ เวลาให้บริการ",
+    "ราคา และ ค่าปรับ",
+    "วิธีการเติมเงิน / ออกใบเสร็จ / เปลี่ยนเบอร์",
+    "ประเภทบริการ",
+  ],
+  "Promotion": [
+    "วอชเชอร์เติมเงิน",
+    "แพ็คเกจส่วนลด",
+    "แนะนำเพื่อน",
+    "สิทธิพิเศษต่างๆ",
+  ],
+  "แจ้งปัญหาการใช้งาน": [
+    "ปัญหาการใช้แอป",
+    "แจ้งรถเสียอุบัติเหตุ",
+    "ปัญหาการเติมเงิน / ค่าปรับ",
+    "ร้องเรียนพนักงาน",
+    "ติดตามรถ / เปลี่ยนแปลงทริป",
+  ],
+  "ติดต่อบริษัท": [
+    "ติดต่องานธุรกิจ",
+    "ร่วมงานกับมูฟมี (partner)",
+    "ติดต่อรับรางวัล",
+  ],
+  "ขอเปิดจุด": [],             // no sub → enable input directly
+};
+
+// Bot placeholder replies per sub-topic (or leaf topic)
+const BOT_REPLIES = {
+  "แจ้งลืมของ / สำภาระ":                    "กรุณาแจ้งรายละเอียดสิ่งของที่ลืม เช่น ประเภท สี ลักษณะ และวันเวลาที่ใช้บริการ เพื่อให้เราช่วยตามหาได้ครับ",
+  "วิธีใช้แอป":                               "สามารถดูวิธีใช้งานแอป MuvMi ได้ที่เมนู 'ช่วยเหลือ' ในแอป หรือสอบถามเพิ่มเติมได้เลยครับ",
+  "พื้นที่ และ เวลาให้บริการ":                "MuvMi ให้บริการในเขต กรุงเทพฯ และปริมณฑล เวลา 06:00–24:00 น. ทุกวันครับ",
+  "ราคา และ ค่าปรับ":                         "อัตราค่าโดยสารเริ่มต้นที่ 20 บาท ค่าปรับกรณียกเลิกหลัง 2 นาที คือ 15 บาทครับ",
+  "วิธีการเติมเงิน / ออกใบเสร็จ / เปลี่ยนเบอร์": "เติมเงินได้ผ่านแอป, บัตรเครดิต/เดบิต หรือ QR Code ออกใบเสร็จได้ในประวัติการเดินทางครับ",
+  "ประเภทบริการ":                              "MuvMi มีบริการ Shuttle, Private และ Premium ให้เลือกตามความต้องการครับ",
+  "วอชเชอร์เติมเงิน":                          "วอชเชอร์เติมเงินสามารถใช้ได้ในหน้า 'กระเป๋าเงิน' โดยกด 'ใช้โค้ด' และกรอกรหัสครับ",
+  "แพ็คเกจส่วนลด":                            "แพ็คเกจปัจจุบัน: SAVE20 ลด 20%, WEEKEND10 คืน 10% ทุกวันเสาร์ครับ",
+  "แนะนำเพื่อน":                              "แนะนำเพื่อนผ่านโค้ดรับผลตอบแทน 20 บาทต่อคน ไม่จำกัดจำนวนครั้งครับ",
+  "สิทธิพิเศษต่างๆ":                          "สมาชิก MuvMi Plus จะได้รับสิทธิ์จอง Priority และส่วนลดพิเศษครับ",
+  "ปัญหาการใช้แอป":                           "กรุณาอธิบายปัญหาที่พบ เช่น แอปค้าง, โหลดไม่ขึ้น หรืออื่นๆ เพื่อให้ทีมช่วยแก้ไขครับ",
+  "แจ้งรถเสียอุบัติเหตุ":                     "กรุณาแจ้งตำแหน่งและรายละเอียดเหตุการณ์ ทีมงานจะประสานงานให้ความช่วยเหลือทันทีครับ",
+  "ปัญหาการเติมเงิน / ค่าปรับ":               "กรุณาแจ้งเลขที่ธุรกรรมและรายละเอียด ทีมการเงินจะตรวจสอบและตอบกลับภายใน 24 ชม.ครับ",
+  "ร้องเรียนพนักงาน":                         "ขออภัยในความไม่สะดวกครับ กรุณาแจ้งรายละเอียด วันเวลา และทะเบียนรถ เพื่อดำเนินการต่อไปครับ",
+  "ติดตามรถ / เปลี่ยนแปลงทริป":              "สามารถติดตามรถได้ผ่านแอป หากต้องการเปลี่ยนแปลงทริปกรุณาแจ้งล่วงหน้าอย่างน้อย 5 นาทีครับ",
+  "ติดต่องานธุรกิจ":                          "สำหรับการติดต่องานธุรกิจ กรุณาส่งอีเมลมาที่ business@muvmi.co หรือแจ้งรายละเอียดด้านล่างครับ",
+  "ร่วมงานกับมูฟมี (partner)":                "สนใจเป็น Partner กับ MuvMi กรุณาส่งรายละเอียดมาที่ partner@muvmi.co ครับ",
+  "ติดต่อรับรางวัล":                          "สำหรับการรับรางวัล กรุณาแจ้งชื่อ-นามสกุล และเลขที่บัตรประชาชน เพื่อยืนยันสิทธิ์ครับ",
+  "ขอเปิดจุด":                                "กรุณาแจ้งพิกัดหรือพื้นที่ที่ต้องการเปิดจุดบริการ ทีมงานจะพิจารณาและติดต่อกลับครับ",
+};
+
+// ─── Mock trip history ────────────────────────────────────────────────────────
+const TRIP_HISTORY = [
+  { id: "trip-1", date: "Mon, 29 Apr 2568", time: "09:00 AM", from: "Wat Pho",       to: "12 Reclining Buddha Lane" },
+  { id: "trip-2", date: "Sun, 28 Apr 2568", time: "15:00 PM", from: "Grand Palace",  to: "45 Royal Way" },
+  { id: "trip-3", date: "Sat, 27 Apr 2568", time: "09:00 AM", from: "The Temple of the Emerald Buddha (Wat Phra Kaew)", to: "33 Space Back entrance" },
+];
+
+// ─── State ────────────────────────────────────────────────────────────────────
+const chatArea   = document.getElementById("chat-area");
+const textInput  = document.getElementById("text-input");
+let inputEnabled = false;
+
+// ─── Avatar ───────────────────────────────────────────────────────────────────
+function avatarEl() {
+  return `<div class="w-11 h-11 rounded-full bg-[#0D57E2] flex items-center justify-center shrink-0 self-start mt-1">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="9" r="4" fill="white"/>
+      <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+    </svg>
+  </div>`;
+}
+
+// ─── Bubble builders ──────────────────────────────────────────────────────────
+function lockBubble(el) {
+  el.querySelectorAll("button").forEach(btn => {
+    btn.disabled = true;
+    btn.classList.add("opacity-40", "cursor-not-allowed");
+  });
+}
+
+function appendBotBubble(innerHTML, id) {
+  const el = document.createElement("div");
+  el.className = "flex items-start gap-3 bubble-in";
+  if (id) el.id = id;
+  el.innerHTML = `${avatarEl()}
+    <div class="bg-[#E7EEFC] rounded-[16px] rounded-tl-sm px-4 py-3 max-w-[76%] flex flex-col gap-3">
+      ${innerHTML}
+    </div>`;
+  chatArea.appendChild(el);
+  scrollBottom();
+  return el;
+}
+
+function appendUserBubble(text) {
+  const el = document.createElement("div");
+  el.className = "flex justify-end bubble-in";
+  el.innerHTML = `<div class="bg-[#0D57E2] rounded-[16px] rounded-tr-sm px-4 py-3 max-w-[76%]">
+    <p class="text-[14px] font-semibold text-white leading-[22px] tracking-[0.25px]">${escHtml(text)}</p>
+  </div>`;
+  chatArea.appendChild(el);
+  scrollBottom();
+}
+
+function buildMenuButtons(items, onClickFn, withBack = false) {
+  const btns = items.map(item =>
+    `<button onclick="${onClickFn}(this, '${escAttr(item)}')"
+      class="w-full bg-white rounded-full px-4 py-2 text-[14px] font-semibold text-[#4F4F4F] tracking-[0.25px] text-center active:bg-gray-100 transition-colors">
+      ${escHtml(item)}
+    </button>`
+  );
+  if (withBack) {
+    btns.push(
+      `<button onclick="goBack(this)"
+        class="w-full bg-white border border-[#909090] rounded-full px-4 py-2 text-[14px] font-semibold text-[#909090] tracking-[0.25px] text-center active:bg-gray-50 transition-colors flex items-center justify-center gap-1">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        ย้อนกลับ
+      </button>`
+    );
+  }
+  return btns.join("");
+}
+
+// ─── Flow actions ─────────────────────────────────────────────────────────────
+
+// Show Level-1 main menu (called on init and Menu button)
+function showMainMenu() {
+  disableInput();
+  const items = Object.keys(TOPICS);
+  appendBotBubble(`
+    <p class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px]">
+      สามารถเลือกหัวข้อที่ต้องการสอบถามจากเมนูด้านล่างได้เลยครับ!
+    </p>
+    <div class="flex flex-col gap-2">${buildMenuButtons(items, "selectMainTopic")}</div>
+  `);
+}
+
+// User selects a Level-1 topic
+function selectMainTopic(btn, topic) {
+  lockBubble(btn.closest(".flex.items-start"));
+  appendUserBubble(topic);
+
+  const subs = TOPICS[topic];
+
+  if (topic === "แจ้งลืมของ / สำภาระ") {
+    // Special flow: show trip history cards
+    setTimeout(() => showTripHistory(), 500);
+    return;
+  }
+
+  if (subs.length === 0) {
+    // No sub-topics → bot confirms + enable input
+    setTimeout(() => {
+      appendBotBubble(`<p class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px]">
+        ${escHtml(BOT_REPLIES[topic] || "กรุณาอธิบายรายละเอียดที่ต้องการครับ")}
+      </p>`);
+      enableInput();
+    }, 500);
+  } else {
+    // Has sub-topics → show sub-menu with back button
+    setTimeout(() => {
+      appendBotBubble(`
+        <p class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px]">
+          กรุณาเลือกหัวข้อย่อยที่ต้องการครับ
+        </p>
+        <div class="flex flex-col gap-2">${buildMenuButtons(subs, "selectSubTopic", true)}</div>
+      `);
+    }, 500);
+  }
+}
+
+// User selects a Level-2 sub-topic
+function selectSubTopic(btn, sub) {
+  lockBubble(btn.closest(".flex.items-start"));
+  appendUserBubble(sub);
+
+  setTimeout(() => {
+    appendBotBubble(`<p class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px]">
+      ${escHtml(BOT_REPLIES[sub] || "ขอบคุณครับ ทีมงานจะดำเนินการให้โดยเร็วครับ")}
+    </p>`);
+    enableInput();
+  }, 500);
+}
+
+// Show trip history cards for "แจ้งลืมของ / สำภาระ"
+function showTripHistory() {
+  const cards = TRIP_HISTORY.map(trip => `
+    <button onclick="selectTrip(this, '${escAttr(trip.id)}')"
+      class="w-full bg-white rounded-[16px] px-4 py-3 text-left active:bg-blue-50 transition-colors">
+      <div class="flex justify-between items-start mb-1">
+        <span class="text-[12px] text-[#4F4F4F] leading-[18px] tracking-[0.25px]">${escHtml(trip.date)}</span>
+        <span class="text-[12px] text-[#4F4F4F] leading-[18px] tracking-[0.25px] shrink-0 ml-2">${escHtml(trip.time)}</span>
+      </div>
+      <div class="flex items-baseline gap-1 mb-0.5">
+        <span class="text-[12px] text-[#0D57E2] leading-[18px] tracking-[0.25px] shrink-0">From :</span>
+        <span class="text-[14px] text-[#4F4F4F] leading-[22px] tracking-[0.25px] truncate">${escHtml(trip.from)}</span>
+      </div>
+      <div class="flex items-baseline gap-1">
+        <span class="text-[12px] text-[#0D57E2] leading-[18px] tracking-[0.25px] shrink-0 pl-[4px]">To :</span>
+        <span class="text-[14px] text-[#4F4F4F] leading-[22px] tracking-[0.25px] truncate">${escHtml(trip.to)}</span>
+      </div>
+    </button>
+  `).join("");
+
+  appendBotBubble(`
+    <p class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px]">
+      กรุณาเลือกทริปที่ลืมสำภาระด้านล่างครับ
+    </p>
+    <div class="flex flex-col gap-2 w-full">${cards}</div>
+    <button onclick="goBack(this)"
+      class="w-full bg-white border border-[#909090] rounded-full px-4 py-2 text-[14px] font-semibold text-[#909090] tracking-[0.25px] text-center active:bg-gray-50 transition-colors flex items-center justify-center gap-1">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      ย้อนกลับ
+    </button>
+  `);
+}
+
+// User taps a trip card
+function selectTrip(btn, tripId) {
+  const trip = TRIP_HISTORY.find(t => t.id === tripId);
+  lockBubble(btn.closest(".flex.items-start"));
+  appendUserBubble(`${trip.date} ${trip.time} | ${trip.from} → ${trip.to}`);
+  setTimeout(() => {
+    appendBotBubble(`<p class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px]">
+      รับทราบครับ กรุณาอธิบายรายละเอียดสิ่งของที่ลืม เช่น ประเภท สี และลักษณะของสิ่งของครับ
+    </p>`);
+    enableInput();
+  }, 500);
+}
+
+// User taps "ย้อนกลับ" inside a sub-menu bubble
+function goBack(btn) {
+  lockBubble(btn.closest(".flex.items-start"));
+  disableInput();
+  appendUserBubble("ย้อนกลับ");
+  setTimeout(showMainMenu, 400);
+}
+
+// ─── Input ────────────────────────────────────────────────────────────────────
+function enableInput() {
+  inputEnabled = true;
+  textInput.disabled = false;
+  textInput.placeholder = "พิมพ์ข้อความ...";
+  textInput.focus();
+}
+
+function disableInput() {
+  inputEnabled = false;
+  textInput.disabled = true;
+  textInput.value = "";
+  textInput.placeholder = "Please select topic above first";
+}
+
+function sendMessage() {
+  const val = textInput.value.trim();
+  if (!val || !inputEnabled) return;
+  textInput.value = "";
+  appendUserBubble(val);
+  setTimeout(() => {
+    appendBotBubble(`<p class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px]">
+      ขอบคุณครับ ทีมงานได้รับข้อความแล้ว จะติดต่อกลับโดยเร็วที่สุดครับ
+    </p>`);
+  }, 600);
+}
+
+// ─── Utils ────────────────────────────────────────────────────────────────────
+function scrollBottom() { chatArea.scrollTop = chatArea.scrollHeight; }
+
+function escHtml(s) {
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+function escAttr(s) { return s.replace(/'/g,"\\'"); }
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+(function init() {
+  // Greeting
+  appendBotBubble(`<p class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px]">
+    สวัสดีครับมีอะไรให้น้อง Muvmi ช่วยเหลือครับวันนี้
+  </p>`);
+  // Main menu after short delay
+  setTimeout(showMainMenu, 400);
+})();
+</script>
+</body>
+</html>

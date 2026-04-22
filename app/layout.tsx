@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Chat App",
-  description: "Mobile chat application",
+  title: "MuvMi Chat",
+  description: "MuvMi Chat - Inbox",
 };
 
 export const viewport: Viewport = {
@@ -20,12 +20,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>
-        <div className="min-h-screen bg-gray-50">
-          <div className="mx-auto max-w-md min-h-screen bg-white shadow-sm">
-            {children}
-          </div>
+    <html lang="th">
+      <body className="bg-gray-100 antialiased">
+        <div className="mx-auto max-w-[430px] min-h-screen bg-white shadow-md">
+          {children}
         </div>
       </body>
     </html>

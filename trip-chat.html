@@ -90,19 +90,79 @@
   const floatingReport = document.getElementById("floating-report");
   const textInput      = document.getElementById("text-input");
 
-  // ── Problem options ───────────────────────────────────────────────────────
-  const PROBLEMS = [
-    { label: "รถไม่ขยับ",              preview: "รถหยุดนิ่ง ไม่เคลื่อนที่ หรือค้างอยู่ที่เดิม" },
-    { label: "รถมาล่าช้า",             preview: "รถมาถึงช้ากว่ากำหนดอย่างมีนัยสำคัญ" },
-    { label: "คนขับออกนอกเส้นทาง",     preview: "คนขับขับรถออกนอกเส้นทางที่กำหนดไว้" },
-    { label: "คนขับจอดไม่ตรงจุด",      preview: "คนขับจอดรับ-ส่งไม่ตรงจุดที่กำหนด" },
-    { label: "ขับรถอันตราย",            preview: "ขับเร็วเกินไปหรือขับแบบประมาท" },
-    { label: "คนขับไม่รู้เส้นทาง",     preview: "คนขับไม่คุ้นเคยกับเส้นทางในพื้นที่" },
-    { label: "แจ้งแก้ไขข้อมูลจุด",     preview: "ข้อมูลจุดรับ-ส่งไม่ถูกต้องหรือล้าสมัย" },
+  // ── Menu structure ────────────────────────────────────────────────────────
+  // gather step types: "text" | "buttons" | "image_confirm"
+  const MENU = [
+    {
+      label: "แจ้งเหตุรถเสีย อุบัติเหตุ",
+      initial: "ขอบคุณที่แจ้งให้ทราบ เราเข้าใจว่านี่เป็นเรื่องเร่งด่วน",
+      gather: [
+        { type: "buttons", prompt: "ท่านปลอดภัยหรือไม่?",   options: ["ปลอดภัยดี", "ไม่ปลอดภัย"] },
+        { type: "buttons", prompt: "มีผู้บาดเจ็บหรือไม่?",  options: ["ไม่มี", "มีผู้บาดเจ็บ"] },
+      ],
+      closing: "เจ้าหน้าที่ของเราจะติดต่อคุณในทันทีเพื่อช่วยเหลือ"
+    },
+    {
+      label: "ร้องเรียนคนขับ",
+      sub: [
+        { label: "คนขับออกนอกเส้นทาง",
+          initial: "รับทราบการร้องเรียน เราจะตรวจสอบทันที", gather: [], closing: null },
+        { label: "คนขับจอดไม่ตรงจุด",
+          initial: "รับทราบการร้องเรียน ขอให้ช่วยแจ้งรายละเอียด",
+          gather: [
+            { type: "buttons",      prompt: "เห็นตำแหน่งปัจจุบันของรถหรือไม่?", options: ["เห็น", "ไม่เห็น"] },
+            { type: "image_confirm", src: "Frame 12.png",
+              prompt: "คุณลูกค้าอยู่ที่จุดนี้ใช่มั้ยครับ?", options: ["ใช่", "ไม่ใช่"] },
+          ],
+          closing: "คนขับได้รับสัญญาณแล้ว เลื่อนมาจุดรับส่งที่ถูกต้อง" },
+        { label: "ขับรถอันตราย",
+          initial: "รับทราบการร้องเรียน สถานการณ์นี้เราถือว่าสำคัญ",
+          gather: [{ type: "text", prompt: "กรุณาอธิบายวิธีการขับที่อันตราย" }],
+          closing: "เราได้ติดต่อคนขับแล้ว หากปัญหายังเกิดขึ้น โปรดแจ้งให้ทราบ" },
+        { label: "คนขับไม่รู้เส้นทาง",
+          initial: "รับทราบ ขออภัยสำหรับความไม่สะดวก เราจะช่วยทันที",
+          gather: [{ type: "text", prompt: "กรุณาแจ้งตำแหน่งปัจจุบันของท่าน" }],
+          closing: "เราได้ส่งตำแหน่งที่ถูกต้องให้คนขับแล้ว" },
+      ]
+    },
+    {
+      label: "เปลี่ยนแปลงทริป",
+      sub: [
+        { label: "เปลี่ยนแปลงจุดรับส่ง",
+          initial: "รับทราบการร้องขอเปลี่ยนแปลง ให้เราตรวจสอบการเปลี่ยนแปลงนั้นได้",
+          gather: [{ type: "text", prompt: "ที่อยู่/สถานที่ใหม่คือที่ไหน?" }],
+          closing: "เราได้อัปเดตจุดรับส่งแล้ว คนขับจะปรับเส้นทาง" },
+        { label: "ยกเลิกทริป",
+          initial: "รับทราบการร้องขอยกเลิก",
+          gather: [{ type: "text", prompt: "กรุณาระบุเหตุผลในการยกเลิกทริป" }],
+          closing: "ยกเลิกทริปเสร็จสิ้น" },
+        { label: "เพิ่มจำนวนผู้โดยสาร",
+          initial: "รับทราบการร้องขอ เราจะตรวจสอบ",
+          gather: [{ type: "text", prompt: "ต้องการเพิ่มผู้โดยสารกี่คน?" }],
+          closing: "อัปเดตจำนวนผู้โดยสารแล้ว" },
+      ]
+    },
+    {
+      label: "ติดตามรถ",
+      sub: [
+        { label: "รถไม่ขยับ",
+          initial: "รับทราบความเป็นห่วง เราจะตรวจสอบทันที",
+          gather: [{ type: "text", prompt: "รถนิ่งมานานแค่ไหนแล้วครับ?" }],
+          closing: "เราติดต่อคนขับแล้ว จะเดินทางต่อในไม่ช้า" },
+        { label: "รถมาล่าช้า",
+          initial: "รับทราบและขออภัยสำหรับความไม่สะดวก",
+          gather: [], closing: "ETA ประมาณ 5-10 นาที ขอบคุณสำหรับการรอ" },
+        { label: "คนขับออกนอกเส้นทาง",
+          initial: "รับทราบและติดตามทันที",
+          gather: [], closing: "เราแจ้งให้คนขับกลับเส้นทางแล้ว ETA ประมาณ [เวลา]" },
+      ]
+    },
   ];
 
-  // "สอบถามเรื่องอื่น/ทั่วไป" is special — enables free text
   const GENERAL = "สอบถามเรื่องอื่น/ทั่วไป";
+
+  // Active gather flow: { issue, stepIdx }
+  let flowState = null;
 
   // ── Avatar ────────────────────────────────────────────────────────────────
   function botAvatar() {
@@ -124,6 +184,7 @@
       </div>`;
     chatArea.appendChild(el);
     scrollBottom();
+    return el;
   }
 
   function appendUserMsg(text) {
@@ -149,9 +210,7 @@
   }
 
   // ── Input bar state ───────────────────────────────────────────────────────
-  function hideReportBtn() {
-    floatingReport.classList.add("hidden");
-  }
+  function hideReportBtn() { floatingReport.classList.add("hidden"); }
 
   function enableInput() {
     textInput.disabled = false;
@@ -164,28 +223,27 @@
     textInput.value = "";
     textInput.placeholder = "กรุณาเลือกปัญหาก่อน";
     floatingReport.classList.remove("hidden");
+    flowState = null;
   }
 
-  function lockBubble(el) {
-    el.querySelectorAll("button").forEach(b => {
-      b.disabled = true;
-      b.classList.add("opacity-40", "cursor-not-allowed");
-    });
+  function hideBubble(el) {
+    if (!el) return;
+    el.classList.add("hidden");
   }
 
-  // ── Open problem menu ─────────────────────────────────────────────────────
+  // ── Main menu ─────────────────────────────────────────────────────────────
   function openReportMenu() {
     hideReportBtn();
 
-    const pills = PROBLEMS.map(p =>
-      `<button onclick="selectProblem(this, '${p.label.replace(/'/g, "\\'")}')"
+    const pills = MENU.map((item, i) =>
+      `<button onclick="selectMenuItem(this, ${i})"
         class="w-full bg-white rounded-full px-4 py-2 text-[14px] font-semibold text-[#4F4F4F] tracking-[0.25px] text-center active:bg-gray-100 transition-colors">
-        ${escHtml(p.label)}
+        ${escHtml(item.label)}
       </button>`
     ).join("");
 
     const generalPill =
-      `<button onclick="selectProblem(this, '${GENERAL}')"
+      `<button onclick="selectGeneralItem(this)"
         class="w-full bg-white border border-[#0D57E2] rounded-full px-4 py-2 text-[14px] font-semibold text-[#0D57E2] tracking-[0.25px] flex items-center justify-center gap-2 active:bg-[#E7EEFC] transition-colors">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0D57E2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(90deg);flex-shrink:0">
           <path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/>
@@ -204,26 +262,111 @@
     );
   }
 
-  // ── Select a problem ──────────────────────────────────────────────────────
-  function selectProblem(btn, problem) {
-    lockBubble(btn.closest(".flex.items-start"));
-    appendUserMsg(problem);
-
-    if (problem === GENERAL) {
-      setTimeout(() => { window.location.href = "support.html"; }, 400);
-    } else if (problem === "แจ้งแก้ไขข้อมูลจุด") {
-      // Ask for details then enable input
-      setTimeout(() => {
-        appendBotMsg(textBubble("กรุณาระบุชื่อจุดและรายละเอียดที่ต้องการแก้ไขได้เลยครับ"));
-        enableInput();
-      }, 500);
+  function selectMenuItem(btn, idx) {
+    const item = MENU[idx];
+    hideBubble(btn.parentElement);
+    appendUserMsg(item.label);
+    if (item.sub) {
+      setTimeout(() => showSubMenu(idx), 400);
     } else {
-      // Confirm receipt then return to default
-      setTimeout(() => {
-        appendBotMsg(textBubble(`รับทราบครับ ได้บันทึกปัญหา "${problem}" แล้ว ทีมงานจะดำเนินการให้เร็วที่สุดครับ`));
-        resetToReport();
-      }, 500);
+      setTimeout(() => runLeafFlow(item), 400);
     }
+  }
+
+  function selectGeneralItem(btn) {
+    hideBubble(btn.parentElement);
+    appendUserMsg(GENERAL);
+    setTimeout(() => { window.location.href = "support.html"; }, 400);
+  }
+
+  // ── Sub-menu ──────────────────────────────────────────────────────────────
+  function showSubMenu(parentIdx) {
+    const category = MENU[parentIdx];
+    const pills = category.sub.map((item, i) =>
+      `<button onclick="selectSubItem(this, ${parentIdx}, ${i})"
+        class="w-full bg-white rounded-full px-4 py-2 text-[14px] font-semibold text-[#4F4F4F] tracking-[0.25px] text-center active:bg-gray-100 transition-colors">
+        ${escHtml(item.label)}
+      </button>`
+    ).join("");
+    appendBotMsg(
+      `<div class="bg-[#E7EEFC] rounded-[16px] rounded-tl-sm px-4 py-3 flex flex-col gap-3">
+        <p class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px]">เลือกรายละเอียดปัญหา</p>
+        <div class="flex flex-col gap-2">${pills}</div>
+      </div>`
+    );
+  }
+
+  function selectSubItem(btn, parentIdx, subIdx) {
+    const item = MENU[parentIdx].sub[subIdx];
+    hideBubble(btn.parentElement);
+    appendUserMsg(item.label);
+    setTimeout(() => runLeafFlow(item), 400);
+  }
+
+  // ── Leaf flow ─────────────────────────────────────────────────────────────
+  function runLeafFlow(issue) {
+    flowState = { issue, stepIdx: 0 };
+    appendBotMsg(textBubble(issue.initial));
+    setTimeout(() => advanceFlow(), 600);
+  }
+
+  function advanceFlow() {
+    if (!flowState) return;
+    const { issue, stepIdx } = flowState;
+
+    if (stepIdx >= issue.gather.length) {
+      if (issue.closing) appendBotMsg(textBubble(issue.closing));
+      flowState = null;
+      resetToReport();
+      return;
+    }
+
+    const step = issue.gather[stepIdx];
+
+    if (step.type === "text") {
+      appendBotMsg(textBubble(step.prompt));
+      enableInput();
+
+    } else if (step.type === "buttons") {
+      const btns = step.options.map((opt, i) =>
+        `<button onclick="handleQuickReply(this, ${i})"
+          class="w-full bg-white rounded-full px-3 py-1.5 text-[13px] font-semibold text-[#0D57E2] border border-[#0D57E2] active:bg-[#E7EEFC] transition-colors">
+          ${escHtml(opt)}
+        </button>`
+      ).join("");
+      appendBotMsg(
+        `<div class="bg-[#E7EEFC] rounded-[16px] rounded-tl-sm px-4 py-3 flex flex-col gap-2">
+          <p class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px]">${escHtml(step.prompt)}</p>
+          <div class="flex flex-col gap-2">${btns}</div>
+        </div>`
+      );
+
+    } else if (step.type === "image_confirm") {
+      const btns = step.options.map((opt, i) =>
+        `<button onclick="handleQuickReply(this, ${i})"
+          class="w-full bg-white rounded-full px-3 py-1.5 text-[13px] font-semibold text-[#0D57E2] border border-[#0D57E2] active:bg-[#E7EEFC] transition-colors">
+          ${escHtml(opt)}
+        </button>`
+      ).join("");
+      appendBotMsg(
+        `<div class="bg-[#E7EEFC] rounded-[16px] rounded-tl-sm px-4 py-3 flex flex-col gap-2">
+          <div class="rounded-[12px] overflow-hidden mb-1">
+            <img src="${step.src}" alt="location" class="w-full object-cover" style="max-height:160px" />
+          </div>
+          <p class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px]">${escHtml(step.prompt)}</p>
+          <div class="flex flex-col gap-2">${btns}</div>
+        </div>`
+      );
+    }
+  }
+
+  function handleQuickReply(btn, optionIdx) {
+    if (!flowState) return;
+    const step = flowState.issue.gather[flowState.stepIdx];
+    hideBubble(btn.parentElement);
+    appendUserMsg(step.options[optionIdx]);
+    flowState.stepIdx++;
+    setTimeout(() => advanceFlow(), 500);
   }
 
   // ── Send free-text message ────────────────────────────────────────────────
@@ -232,10 +375,18 @@
     if (!val || textInput.disabled) return;
     textInput.value = "";
     appendUserMsg(val);
-    setTimeout(() => {
-      appendBotMsg(textBubble("ได้รับข้อความแล้วครับ ทีมงานจะดำเนินการให้เร็วที่สุดครับ"));
-      resetToReport();
-    }, 800);
+
+    if (flowState && flowState.issue.gather[flowState.stepIdx]?.type === "text") {
+      textInput.disabled = true;
+      textInput.placeholder = "กรุณาเลือกปัญหาก่อน";
+      flowState.stepIdx++;
+      setTimeout(() => advanceFlow(), 800);
+    } else {
+      setTimeout(() => {
+        appendBotMsg(textBubble("ได้รับข้อความแล้วครับ ทีมงานจะดำเนินการให้เร็วที่สุดครับ"));
+        resetToReport();
+      }, 800);
+    }
   }
 
   // ── Utils ─────────────────────────────────────────────────────────────────
@@ -249,13 +400,12 @@
     return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
   }
 
-  // ── Init: mock conversation ───────────────────────────────────────────────
+  // ── Init ──────────────────────────────────────────────────────────────────
   (function init() {
     appendBotMsg(
       textBubble("สก2305 กำลังไปรับผู้โดยสาร รอรถที่จุด pickup ได้เลยครับ") +
       imageBubble("Frame 12.png", "ตำแหน่งคนขับ")
     );
-    // input starts hidden; แจ้งปัญหา button is shown
   })();
 </script>
 </body>

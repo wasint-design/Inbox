@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>MuvMi – Trip</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; background: #000; }
+    .frame {
+      margin: 0 auto;
+      max-width: 430px;
+      position: relative;
+    }
+    .frame img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .tap-zone {
+      position: absolute;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+</head>
+<body>
+
+<div class="frame">
+
+  <img src="EN.png" alt="trip map" />
+
+  <!-- Tap zone: top-left logo → back -->
+  <button class="tap-zone" onclick="history.back()"
+    style="top: 7%; left: 3%; width: 56px; height: 56px; border-radius: 50%;">
+  </button>
+
+  <!-- Tap zone: chat icon (bottom-right, above scan button) → trip chat -->
+  <button class="tap-zone" onclick="window.location.href='trip-chat.html'"
+    style="bottom: calc(22% - 84px); right: 3%; width: 56px; height: 56px; border-radius: 50%;">
+  </button>
+
+</div>
+
+</body>
+</html>

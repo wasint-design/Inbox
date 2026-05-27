@@ -57,20 +57,19 @@
   <div id="chat-area" class="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3"></div>
 
   <!-- Input Bar -->
-  <div class="shrink-0 bg-white border-t border-[#E7EEFC] px-3 py-2">
+  <div class="shrink-0 bg-white border-t border-[#E7EEFC] p-4">
+    <div class="flex items-center gap-2">
 
-    <!-- State A: แจ้งปัญหา button -->
-    <div id="bar-report" class="flex items-center justify-center">
-      <button onclick="openReportMenu()"
-        class="w-full bg-[#0D57E2] text-white rounded-full py-2 text-[15px] font-semibold tracking-[0.25px] active:bg-blue-700 transition-colors">
-        แจ้งปัญหา
-      </button>
-    </div>
+      <!-- แจ้งปัญหา button (inline, show/hide) -->
+      <div id="floating-report" class="shrink-0">
+        <button onclick="openReportMenu()"
+          class="bg-[#E7EEFC] text-[#0D57E2] rounded-full px-4 py-1.5 text-[15px] font-semibold tracking-[0.25px] whitespace-nowrap active:bg-blue-100 transition-colors">
+          แจ้งปัญหา
+        </button>
+      </div>
 
-    <!-- State B: disabled input + send (hidden by default) -->
-    <div id="bar-input" class="hidden flex items-center gap-2">
       <input id="text-input" type="text" disabled
-        placeholder="เลือกปัญหาที่ต้องการแจ้งด้านบน"
+        placeholder="กรุณาเลือกปัญหาก่อน"
         class="flex-1 min-w-0 bg-[#EEE] border border-[#909090] rounded-full px-4 py-1 text-[14px] text-[#909090] placeholder-[#909090] outline-none
                disabled:bg-[#EEE] disabled:border-[#909090]
                enabled:bg-white enabled:border-[#0D57E2] enabled:text-[#4F4F4F] enabled:placeholder-gray-400"
@@ -80,17 +79,16 @@
           <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
         </svg>
       </button>
-    </div>
 
+    </div>
   </div>
 
 </div>
 
 <script>
-  const chatArea  = document.getElementById("chat-area");
-  const barReport = document.getElementById("bar-report");
-  const barInput  = document.getElementById("bar-input");
-  const textInput = document.getElementById("text-input");
+  const chatArea       = document.getElementById("chat-area");
+  const floatingReport = document.getElementById("floating-report");
+  const textInput      = document.getElementById("text-input");
 
   // ── Problem options ───────────────────────────────────────────────────────
   const PROBLEMS = [
@@ -121,7 +119,7 @@
     const el = document.createElement("div");
     el.className = "flex items-start gap-3 bubble-in";
     el.innerHTML = `${botAvatar()}
-      <div class="flex flex-col gap-2 max-w-[72%]">
+      <div class="flex flex-col gap-2 max-w-[80%]">
         ${contentHTML}
       </div>`;
     chatArea.appendChild(el);
@@ -151,15 +149,21 @@
   }
 
   // ── Input bar state ───────────────────────────────────────────────────────
-  function switchToInput() {
-    barReport.classList.add("hidden");
-    barInput.classList.remove("hidden");
+  function hideReportBtn() {
+    floatingReport.classList.add("hidden");
   }
 
   function enableInput() {
     textInput.disabled = false;
     textInput.placeholder = "พิมพ์ข้อความ...";
     textInput.focus();
+  }
+
+  function resetToReport() {
+    textInput.disabled = true;
+    textInput.value = "";
+    textInput.placeholder = "กรุณาเลือกปัญหาก่อน";
+    floatingReport.classList.remove("hidden");
   }
 
   function lockBubble(el) {
@@ -171,34 +175,31 @@
 
   // ── Open problem menu ─────────────────────────────────────────────────────
   function openReportMenu() {
-    switchToInput(); // swap button → disabled input
+    hideReportBtn();
 
-    // Exact same row template as index.html renderMessages()
-    const rows = PROBLEMS.map(p =>
+    const pills = PROBLEMS.map(p =>
       `<button onclick="selectProblem(this, '${p.label.replace(/'/g, "\\'")}')"
-        class="relative w-full flex flex-col gap-1 px-4 py-4 border-b border-[#EEEEEE] active:bg-gray-50 cursor-pointer text-left">
-        <span class="text-[16px] font-semibold text-[#4F4F4F] tracking-[0.25px] leading-6">${escHtml(p.label)}</span>
-        <span class="text-[14px] font-medium text-[#909090] tracking-[0.25px] leading-[22px] truncate">${escHtml(p.preview)}</span>
+        class="w-full bg-white rounded-full px-4 py-2 text-[14px] font-semibold text-[#4F4F4F] tracking-[0.25px] text-center active:bg-gray-100 transition-colors">
+        ${escHtml(p.label)}
       </button>`
     ).join("");
 
-    const generalRow =
+    const generalPill =
       `<button onclick="selectProblem(this, '${GENERAL}')"
-        class="relative w-full flex flex-col gap-1 px-4 py-4 active:bg-gray-50 cursor-pointer text-left">
-        <span class="flex items-center gap-2 text-[16px] font-semibold text-[#0D57E2] tracking-[0.25px] leading-6">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0D57E2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(90deg);flex-shrink:0">
-            <path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/>
-          </svg>
-          ${escHtml(GENERAL)}
-        </span>
-        <span class="text-[14px] font-medium text-[#909090] tracking-[0.25px] leading-[22px]">พิมพ์ข้อความสอบถามเพิ่มเติม</span>
+        class="w-full bg-white border border-[#0D57E2] rounded-full px-4 py-2 text-[14px] font-semibold text-[#0D57E2] tracking-[0.25px] flex items-center justify-center gap-2 active:bg-[#E7EEFC] transition-colors">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0D57E2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(90deg);flex-shrink:0">
+          <path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/>
+        </svg>
+        ${escHtml(GENERAL)}
       </button>`;
 
     appendBotMsg(
-      textBubble("เลือกปัญหาที่ต้องการแจ้งด้านล่างได้เลยครับ") +
-      `<div class="bg-white rounded-[16px] overflow-hidden border border-[#EEEEEE]">
-        ${rows}
-        ${generalRow}
+      `<div class="bg-[#E7EEFC] rounded-[16px] rounded-tl-sm px-4 py-3 flex flex-col gap-3">
+        <p class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px]">เลือกปัญหาที่ต้องการแจ้งด้านล่างได้เลยครับ</p>
+        <div class="flex flex-col gap-2">
+          ${pills}
+          ${generalPill}
+        </div>
       </div>`
     );
   }
@@ -209,15 +210,18 @@
     appendUserMsg(problem);
 
     if (problem === GENERAL) {
-      // Enable free-text input
+      setTimeout(() => { window.location.href = "support.html"; }, 400);
+    } else if (problem === "แจ้งแก้ไขข้อมูลจุด") {
+      // Ask for details then enable input
       setTimeout(() => {
-        appendBotMsg(textBubble("กรุณาพิมพ์รายละเอียดที่ต้องการสอบถามได้เลยครับ"));
+        appendBotMsg(textBubble("กรุณาระบุชื่อจุดและรายละเอียดที่ต้องการแก้ไขได้เลยครับ"));
         enableInput();
       }, 500);
     } else {
-      // Confirm receipt, keep input disabled
+      // Confirm receipt then return to default
       setTimeout(() => {
         appendBotMsg(textBubble(`รับทราบครับ ได้บันทึกปัญหา "${problem}" แล้ว ทีมงานจะดำเนินการให้เร็วที่สุดครับ`));
+        resetToReport();
       }, 500);
     }
   }
@@ -230,6 +234,7 @@
     appendUserMsg(val);
     setTimeout(() => {
       appendBotMsg(textBubble("ได้รับข้อความแล้วครับ ทีมงานจะดำเนินการให้เร็วที่สุดครับ"));
+      resetToReport();
     }, 800);
   }
 

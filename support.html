@@ -69,7 +69,7 @@
   <div id="chat-area" class="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4"></div>
 
   <!-- Input Bar -->
-  <div class="shrink-0 bg-white border-t border-[#E7EEFC] px-3 py-2">
+  <div class="shrink-0 bg-white border-t border-[#E7EEFC] p-4">
     <div class="flex items-center gap-2">
       <button id="menu-btn" onclick="showMainMenu()"
         class="shrink-0 px-4 py-1 rounded-full text-[14px] font-semibold tracking-[0.25px] bg-[#E7EEFC] border border-[#E7EEFC] text-[#0D57E2] whitespace-nowrap">
@@ -221,6 +221,16 @@ function currentTripBtn() {
   </button>`;
 }
 
+function generalInquiryBtn() {
+  return `<button onclick="goGeneralInquiry(this)"
+    class="w-full bg-white border border-[#0D57E2] rounded-full px-4 py-2 text-[14px] font-semibold text-[#0D57E2] tracking-[0.25px] flex items-center justify-center gap-2 active:bg-[#E7EEFC] transition-colors">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0D57E2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+    สอบถามทั่วไป
+  </button>`;
+}
+
 // Show Level-1 main menu (called on init and Menu button)
 function showMainMenu() {
   disableInput();
@@ -333,6 +343,13 @@ function askCurrentTrip(btn) {
   lockBubble(btn.closest(".flex.items-start"));
   appendUserBubble("สอบถามทริปปัจจุบัน");
   setTimeout(() => { window.location.href = "trip-chat.html"; }, 400);
+}
+
+// User taps "สอบถามทั่วไป" → navigate to inbox
+function goGeneralInquiry(btn) {
+  lockBubble(btn.closest(".flex.items-start"));
+  appendUserBubble("สอบถามทั่วไป");
+  setTimeout(() => { window.location.href = "index.html"; }, 400);
 }
 
 // ─── Input ────────────────────────────────────────────────────────────────────

@@ -215,6 +215,7 @@
     textInput.disabled = false;
     textInput.placeholder = "พิมพ์ข้อความ...";
     sendBtn.disabled = false;
+    reportBtn.disabled = false;
     textInput.focus();
   }
 
@@ -234,7 +235,12 @@
 
   // ── Main menu ─────────────────────────────────────────────────────────────
   function openReportMenu() {
+    flowState = null;
     reportBtn.disabled = true;
+    textInput.disabled = true;
+    textInput.value = "";
+    textInput.placeholder = "กรุณาเลือกปัญหาก่อน";
+    sendBtn.disabled = true;
 
     const pills = MENU.map((item, i) =>
       `<button onclick="selectMenuItem(this, ${i})"

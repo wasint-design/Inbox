@@ -282,7 +282,7 @@ function tripBtn() {
 
 // ─── Main menu ────────────────────────────────────────────────────────────────
 function showMainMenu() {
-  if (flowState) return; // ถ้ากำลัง flow อยู่ ไม่ขึ้น menu ซ้ำ
+  flowState = null;
   hideBubble(currentChoiceBubble);
   currentChoiceBubble = null;
   disableInput();
@@ -361,6 +361,7 @@ function enableInput() {
   textInput.disabled = false;
   textInput.placeholder = "พิมพ์ข้อความ...";
   sendBtn.disabled = false;
+  menuBtn.disabled = false;
   textInput.focus();
 }
 

@@ -72,7 +72,7 @@
   <div class="shrink-0 bg-white border-t border-[#E7EEFC] p-4">
     <div class="flex items-center gap-2">
       <button id="menu-btn" onclick="showMainMenu()"
-        class="shrink-0 px-4 py-1 rounded-full text-[14px] font-semibold tracking-[0.25px] bg-[#E7EEFC] border border-[#E7EEFC] text-[#0D57E2] whitespace-nowrap">
+        class="shrink-0 px-4 py-1 rounded-full text-[14px] font-semibold tracking-[0.25px] bg-[#E7EEFC] border border-[#E7EEFC] text-[#0D57E2] whitespace-nowrap disabled:opacity-30 disabled:cursor-not-allowed">
         Menu
       </button>
       <input id="text-input" type="text" disabled
@@ -81,7 +81,7 @@
                disabled:bg-[#EEE] disabled:border-[#909090] disabled:text-[#909090]
                enabled:bg-white enabled:border-[#0D57E2] enabled:text-[#4F4F4F] enabled:placeholder-gray-400"
         onkeydown="if(event.key==='Enter') sendMessage()" />
-      <button onclick="sendMessage()" class="shrink-0 w-8 h-8 flex items-center justify-center">
+      <button id="send-btn" onclick="sendMessage()" disabled class="shrink-0 w-8 h-8 flex items-center justify-center disabled:opacity-30">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="#0D57E2">
           <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
         </svg>
@@ -215,7 +215,10 @@ const MENU = [
 // ─── State ────────────────────────────────────────────────────────────────────
 const chatArea  = document.getElementById("chat-area");
 const textInput = document.getElementById("text-input");
+const menuBtn   = document.getElementById("menu-btn");
+const sendBtn   = document.getElementById("send-btn");
 let flowState = null; // { item, stepIdx }
+let currentChoiceBubble = null;
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 function avatarEl() {
@@ -279,6 +282,9 @@ function tripBtn() {
 
 // ─── Main menu ────────────────────────────────────────────────────────────────
 function showMainMenu() {
+  if (flowState) return; // ถ้ากำลัง flow อยู่ ไม่ขึ้น menu ซ้ำ
+  hideBubble(currentChoiceBubble);
+  currentChoiceBubble = null;
   disableInput();
   appendBotBubble(`
     <p class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px]">
@@ -316,7 +322,8 @@ function selectL2(btn, i0, i1, i2) {
 }
 
 function showSubMenu(items, fnName, ...args) {
-  appendBotBubble(`
+  menuBtn.disabled = false;
+  currentChoiceBubble = appendBotBubble(`
     <p class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px]">กรุณาเลือกหัวข้อย่อยที่ต้องการครับ</p>
     <div class="flex flex-col gap-2">
       ${pillsHTML(items, fnName, ...args)}
@@ -332,7 +339,7 @@ function runLeaf(item) {
     setTimeout(() => advanceFlow(), 600);
   } else {
     appendBotBubble(`<p class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px]">${escHtml(item.response)}</p>`);
-    enableInput();
+    resetToDefault();
   }
 }
 
@@ -342,7 +349,7 @@ function advanceFlow() {
   if (stepIdx >= item.gather.length) {
     if (item.closing) appendBotBubble(`<p class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px]">${escHtml(item.closing)}</p>`);
     flowState = null;
-    enableInput();
+    resetToDefault();
     return;
   }
   appendBotBubble(`<p class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px]">${escHtml(item.gather[stepIdx].prompt)}</p>`);
@@ -353,13 +360,24 @@ function advanceFlow() {
 function enableInput() {
   textInput.disabled = false;
   textInput.placeholder = "พิมพ์ข้อความ...";
+  sendBtn.disabled = false;
   textInput.focus();
+}
+
+function resetToDefault() {
+  textInput.disabled = true;
+  textInput.value = "";
+  textInput.placeholder = "Please select topic above first";
+  sendBtn.disabled = true;
+  menuBtn.disabled = false;
 }
 
 function disableInput() {
   textInput.disabled = true;
   textInput.value = "";
   textInput.placeholder = "Please select topic above first";
+  menuBtn.disabled = true;
+  sendBtn.disabled = true;
 }
 
 function sendMessage() {
@@ -373,8 +391,11 @@ function sendMessage() {
     flowState.stepIdx++;
     setTimeout(() => advanceFlow(), 800);
   } else {
+    textInput.disabled = true;
+    sendBtn.disabled = true;
     setTimeout(() => {
       appendBotBubble(`<p class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px]">ขอบคุณครับ ทีมงานได้รับข้อความแล้ว จะติดต่อกลับโดยเร็วที่สุดครับ</p>`);
+      resetToDefault();
     }, 600);
   }
 }

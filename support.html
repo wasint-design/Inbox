@@ -7,13 +7,15 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { background: #f3f4f6; }
-    #chat-area { scroll-behavior: smooth; }
+    #chat-area { scroll-behavior: smooth; overscroll-behavior-y: none; }
     .bubble-in { animation: fadeUp 0.2s ease; }
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(8px); }
       to   { opacity: 1; transform: translateY(0); }
     }
     input:disabled { cursor: not-allowed; }
+    #pull-arrow { transition: transform 0.2s ease; }
+    #pull-indicator.snapping { transition: height 0.25s ease, opacity 0.25s ease; }
   </style>
 </head>
 <body class="antialiased">
@@ -65,6 +67,21 @@
     </button>
   </div>
 
+  <!-- Older chat hint -->
+  <div id="older-hint" class="shrink-0 flex justify-center items-center py-1.5 bg-white">
+    <span class="text-[12px] text-[#909090] tracking-[0.25px]">ดึงลงเพื่อดูแชทเก่า</span>
+  </div>
+
+  <!-- Pull-to-load indicator -->
+  <div id="pull-indicator" class="shrink-0 flex items-center justify-center bg-white overflow-hidden" style="height:0;opacity:0">
+    <div class="flex items-center gap-2 py-1">
+      <svg id="pull-arrow" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0D57E2" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 5v14M5 12l7 7 7-7"/>
+      </svg>
+      <span id="pull-text" class="text-[13px] font-semibold text-[#0D57E2] tracking-[0.25px]">ดึงเพื่อดูแชทเก่า</span>
+    </div>
+  </div>
+
   <!-- Chat Area -->
   <div id="chat-area" class="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4"></div>
 
@@ -92,6 +109,13 @@
 </div>
 
 <script>
+// ─── Trip history mock data ───────────────────────────────────────────────────
+const TRIP_HISTORY = [
+  { id: 1, date: "30 ก.ค. 2569", time: "09:15 น.", from: "อนุสาวรีย์ชัยฯ", to: "แยกพหลฯ" },
+  { id: 2, date: "29 ก.ค. 2569", time: "17:30 น.", from: "BTS หมอชิต", to: "ลาดพร้าว 71" },
+  { id: 3, date: "28 ก.ค. 2569", time: "08:00 น.", from: "วิภาวดี-รังสิต", to: "ห้าแยกลาดพร้าว" },
+];
+
 // ─── Menu data ────────────────────────────────────────────────────────────────
 const MENU = [
   {
@@ -103,11 +127,17 @@ const MENU = [
         closing: "เติมเงินเสร็จเรียบร้อย ขอบคุณ" },
       { label: "ค่าบริการ",
         initial: "รับทราบข้อสงสัยเกี่ยวกับค่าบริการ",
-        gather: [{ type: "text", prompt: "ค่าบริการใดที่มีข้อสงสัย?" }],
+        gather: [
+          { type: "tripPicker", prompt: "กรุณาเลือกทริปที่ต้องการสอบถามค่าบริการครับ" },
+          { type: "text", prompt: "ค่าบริการใดที่มีข้อสงสัยครับ?" },
+        ],
         closing: "ค่าบริการนี้ถูกต้องตามนโยบาย" },
       { label: "ค่าปรับ",
         initial: "รับทราบข้อสงสัยเกี่ยวกับค่าปรับ",
-        gather: [{ type: "text", prompt: "เกี่ยวกับค่าปรับประเภทใด?" }],
+        gather: [
+          { type: "tripPicker", prompt: "กรุณาเลือกทริปที่ต้องการสอบถามค่าปรับครับ" },
+          { type: "text", prompt: "เกี่ยวกับค่าปรับประเภทใดครับ?" },
+        ],
         closing: "เข้าใจแล้ว ขอบคุณที่ถาม" },
       { label: "แจ้งแก้ไขข้อมูลจุด",
         initial: "รับทราบการแจ้ง ขอให้ช่วยแก้ไขข้อมูล",
@@ -120,34 +150,49 @@ const MENU = [
     sub: [
       { label: "พูดจาไม่เหมาะสม",
         initial: "รับทราบการร้องเรียน เราถือว่านี่เป็นเรื่องสำคัญ",
-        gather: [{ type: "text", prompt: "อธิบายพฤติกรรมที่ไม่เหมาะสม" }],
+        gather: [
+          { type: "tripPicker", prompt: "กรุณาเลือกทริปที่เกิดเหตุครับ" },
+          { type: "text", prompt: "อธิบายพฤติกรรมที่ไม่เหมาะสมครับ" },
+        ],
         closing: "เราจะตรวจสอบและดำเนินการที่เหมาะสม" },
       { label: "ขับรถอันตราย",
         initial: "รับทราบการร้องเรียน สถานการณ์นี้เราถือว่าสำคัญ",
-        gather: [{ type: "text", prompt: "อธิบายวิธีการขับที่อันตราย" }],
+        gather: [
+          { type: "tripPicker", prompt: "กรุณาเลือกทริปที่เกิดเหตุครับ" },
+          { type: "text", prompt: "อธิบายวิธีการขับที่อันตรายครับ" },
+        ],
         closing: "เราจะดำเนินการทันที หากปัญหายังเกิดขึ้น โปรดแจ้ง" },
       { label: "รับส่งไม่ตรงจุด",
         initial: "รับทราบการร้องเรียน",
-        gather: [{ type: "text", prompt: "พนักงานจอดที่ไหนแทน?" }],
+        gather: [
+          { type: "tripPicker", prompt: "กรุณาเลือกทริปที่เกิดเหตุครับ" },
+          { type: "text", prompt: "พนักงานจอดที่ไหนแทนครับ?" },
+        ],
         closing: "พนักงานได้รับสัญญาณแล้ว เลื่อนมาจุดที่ถูกต้อง" },
       { label: "ไม่รู้เส้นทาง",
         initial: "รับทราบ ขออภัยสำหรับความไม่สะดวก",
-        gather: [{ type: "text", prompt: "ตำแหน่งปัจจุบัน?" }],
+        gather: [
+          { type: "tripPicker", prompt: "กรุณาเลือกทริปที่เกิดเหตุครับ" },
+          { type: "text", prompt: "ตำแหน่งปัจจุบันครับ?" },
+        ],
         closing: "ส่งตำแหน่งที่ถูกต้องแล้ว" },
       { label: "ออกก่อนเวลา",
         initial: "รับทราบการร้องเรียน",
-        gather: [{ type: "text", prompt: "ออกก่อนเวลาเท่าไหร่?" }],
+        gather: [
+          { type: "tripPicker", prompt: "กรุณาเลือกทริปที่เกิดเหตุครับ" },
+          { type: "text", prompt: "ออกก่อนเวลาประมาณเท่าไหร่ครับ?" },
+        ],
         closing: "เราจะติดตามกับพนักงาน" },
     ]
   },
   {
     label: "แจ้งลืมของหรือสัมภาระ",
-    initial: "รับทราบการแจ้ง ขอให้ช่วยอธิบายรายละเอียด",
+    initial: "รับทราบการแจ้ง ขอให้ช่วยอธิบายรายละเอียดครับ",
     gather: [
-      { type: "text", prompt: "ลืมของอะไร?" },
-      { type: "text", prompt: "เมื่อไหร่ที่ลืม?" },
+      { type: "tripPicker", prompt: "กรุณาใส่ trip id ที่ลืมของไว้ครับ" },
+      { type: "text", prompt: "ลืมของอะไรครับ?" },
     ],
-    closing: "เราจะติดตามกับพนักงาน โปรดรอติดต่อจากเรา"
+    closing: "เราจะติดตามกับพนักงาน โปรดรอติดต่อจากเราครับ"
   },
   {
     label: "สอบถามการใช้งาน",
@@ -352,8 +397,77 @@ function advanceFlow() {
     resetToDefault();
     return;
   }
-  appendBotBubble(`<p class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px]">${escHtml(item.gather[stepIdx].prompt)}</p>`);
-  enableInput();
+  const step = item.gather[stepIdx];
+  if (step.type === "tripPicker") {
+    showTripPicker(step.prompt);
+  } else {
+    appendBotBubble(`<p class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px]">${escHtml(step.prompt)}</p>`);
+    enableInput();
+  }
+}
+
+// ─── Trip picker ──────────────────────────────────────────────────────────────
+function showTripPicker(prompt) {
+  disableInput();
+  menuBtn.disabled = false;
+  const tripsHTML = TRIP_HISTORY.map((t, i) =>
+    `<button onclick="selectTrip(this, ${i})"
+      class="w-full bg-white rounded-2xl px-4 py-3 text-left active:bg-gray-100 transition-colors">
+      <div class="text-[12px] font-semibold text-[#909090] leading-[18px]">${escHtml(t.date)} • ${escHtml(t.time)}</div>
+      <div class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px] mt-0.5 flex items-center gap-1.5">
+        <span>${escHtml(t.from)}</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#909090" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M5 12h14M14 6l6 6-6 6"/></svg>
+        <span>${escHtml(t.to)}</span>
+      </div>
+    </button>`
+  ).join("");
+  const otherHTML = `
+    <div class="flex items-center gap-2">
+      <div class="flex-1 h-px bg-[#D4E2FA]"></div>
+      <span class="text-[11px] font-semibold text-[#BDBDBD]">หรือ</span>
+      <div class="flex-1 h-px bg-[#D4E2FA]"></div>
+    </div>
+    <button onclick="selectOtherTrip(this)"
+      class="w-full bg-white rounded-2xl px-4 py-3 text-left active:bg-gray-100 transition-colors">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <div class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px]">ทริปอื่นๆ</div>
+          <div class="text-[12px] text-[#909090] mt-0.5 tracking-[0.25px]">คัดลอก Trip ID จากประวัติมาระบุทริป</div>
+        </div>
+        <span onclick="event.stopPropagation()" role="button"
+          class="shrink-0 flex items-center gap-1.5 bg-[#E7EEFC] rounded-full px-3 py-1.5 active:bg-[#D0DFFB] transition-colors">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0D57E2" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <span class="text-[13px] font-semibold text-[#0D57E2]">ประวัติ</span>
+        </span>
+      </div>
+    </button>`;
+  currentChoiceBubble = appendBotBubble(`
+    <p class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px]">${escHtml(prompt)}</p>
+    <div class="flex flex-col gap-2">
+      ${tripsHTML}
+      ${otherHTML}
+    </div>
+  `);
+}
+
+function selectTrip(btn, idx) {
+  const trip = TRIP_HISTORY[idx];
+  const label = `${trip.date} ${trip.time} (${trip.from} → ${trip.to})`;
+  hideBubble(btn.parentElement);
+  appendUserBubble(label);
+  flowState.stepIdx++;
+  setTimeout(() => advanceFlow(), 800);
+}
+
+function selectOtherTrip(btn) {
+  hideBubble(btn.parentElement);
+  textInput.disabled = false;
+  textInput.placeholder = "กรอก Trip ID...";
+  sendBtn.disabled = false;
+  menuBtn.disabled = false;
+  textInput.focus();
 }
 
 // ─── Input ────────────────────────────────────────────────────────────────────
@@ -419,6 +533,131 @@ function escHtml(s) {
   return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
 
+// ─── Pull to load older messages ─────────────────────────────────────────────
+const pullIndicator = document.getElementById("pull-indicator");
+const pullArrow     = document.getElementById("pull-arrow");
+const pullText      = document.getElementById("pull-text");
+
+const PULL_THRESHOLD = 64;
+let touchStartY = 0;
+let touchLastY  = 0;
+let pulling     = false;
+let loadingOld  = false;
+
+const OLDER_PAGES = [
+  [
+    { type: "date", text: "28 พ.ค. 2569" },
+    { type: "bot",  text: "สวัสดีครับ มีอะไรให้น้อง Muvmi ช่วยเหลือครับ" },
+    { type: "bot",  text: "สามารถเลือกหัวข้อที่ต้องการสอบถามจากเมนูด้านล่างได้เลยครับ!" },
+    { type: "user", text: "เช็กโปรโมชั่น" },
+    { type: "user", text: "แพ็กเกจ Voucher" },
+    { type: "bot",  text: "แพ็กเกจ Voucher เดือนนี้: เติม 200 บาท รับ Voucher ส่วนลด 30 บาท จำนวน 3 ใบ ใช้ได้ถึง 31 พ.ค. 2569 ครับ" },
+  ],
+  [
+    { type: "date", text: "15 พ.ค. 2569" },
+    { type: "bot",  text: "สวัสดีครับ มีอะไรให้น้อง Muvmi ช่วยเหลือครับ" },
+    { type: "user", text: "แจ้งลืมของหรือสัมภาระ" },
+    { type: "bot",  text: "รับทราบการแจ้ง ขอให้ช่วยอธิบายรายละเอียดครับ" },
+    { type: "user", text: "ลืมกระเป๋าผ้าสีน้ำตาลบนรถครับ" },
+    { type: "bot",  text: "เมื่อไหร่ที่ลืมครับ?" },
+    { type: "user", text: "ช่วงเที่ยงประมาณ 12:30 น." },
+    { type: "bot",  text: "เราจะติดตามกับพนักงาน โปรดรอติดต่อจากเราครับ" },
+  ],
+];
+let olderPage = 0;
+
+function onPullStart(y) {
+  if (chatArea.scrollTop > 0 || loadingOld || olderPage >= OLDER_PAGES.length) return;
+  touchStartY = y;
+  touchLastY  = y;
+  pulling = true;
+}
+function onPullMove(y) {
+  if (!pulling) return;
+  touchLastY = y;
+  const dist = Math.max(0, touchLastY - touchStartY);
+  pullIndicator.style.height  = Math.min(dist * 0.45, 48) + "px";
+  pullIndicator.style.opacity = Math.min(dist / PULL_THRESHOLD, 1);
+  if (dist >= PULL_THRESHOLD) {
+    pullArrow.style.transform = "rotate(180deg)";
+    pullText.textContent = "ปล่อยเพื่อโหลด";
+  } else {
+    pullArrow.style.transform = "rotate(0deg)";
+    pullText.textContent = "ดึงเพื่อดูแชทเก่า";
+  }
+}
+function onPullEnd() {
+  if (!pulling) return;
+  pulling = false;
+  const dist = Math.max(0, touchLastY - touchStartY);
+  if (dist >= PULL_THRESHOLD) startLoadOlder();
+  else snapIndicator(false);
+}
+
+// Touch
+chatArea.addEventListener("touchstart", e => onPullStart(e.touches[0].clientY), { passive: true });
+chatArea.addEventListener("touchmove",  e => onPullMove(e.touches[0].clientY),  { passive: true });
+chatArea.addEventListener("touchend",   () => onPullEnd());
+
+// Mouse (desktop)
+chatArea.addEventListener("mousedown",  e => onPullStart(e.clientY));
+window.addEventListener("mousemove",    e => onPullMove(e.clientY));
+window.addEventListener("mouseup",      () => onPullEnd());
+
+function startLoadOlder() {
+  loadingOld = true;
+  pullIndicator.style.height  = "44px";
+  pullIndicator.style.opacity = "1";
+  pullArrow.style.display = "none";
+  pullText.textContent = "กำลังโหลด...";
+  setTimeout(() => {
+    loadOlderPage();
+    loadingOld = false;
+    pullArrow.style.display = "";
+    pullArrow.style.transform = "rotate(0deg)";
+    pullText.textContent = olderPage < OLDER_PAGES.length ? "ดึงเพื่อดูแชทเก่า" : "ไม่มีแชทเก่าแล้ว";
+    if (olderPage >= OLDER_PAGES.length) document.getElementById("older-hint").classList.add("hidden");
+    snapIndicator(false);
+  }, 700);
+}
+
+function snapIndicator(show) {
+  pullIndicator.classList.add("snapping");
+  pullIndicator.style.height  = show ? "44px" : "0";
+  pullIndicator.style.opacity = show ? "1"    : "0";
+  setTimeout(() => pullIndicator.classList.remove("snapping"), 280);
+}
+
+function loadOlderPage() {
+  if (olderPage >= OLDER_PAGES.length) return;
+  const msgs  = OLDER_PAGES[olderPage++];
+  const prevH = chatArea.scrollHeight;
+  const frag  = document.createDocumentFragment();
+  msgs.forEach(m => { const el = makeOldMsgEl(m); if (el) frag.appendChild(el); });
+  chatArea.insertBefore(frag, chatArea.firstChild);
+  chatArea.scrollTop = chatArea.scrollHeight - prevH;
+}
+
+function makeOldMsgEl(m) {
+  const el = document.createElement("div");
+  if (m.type === "date") {
+    el.className = "flex justify-center";
+    el.innerHTML = `<span class="text-[12px] font-semibold text-[#909090] bg-gray-100 px-3 py-1 rounded-full">${escHtml(m.text)}</span>`;
+  } else if (m.type === "bot") {
+    el.className = "flex items-start gap-3";
+    el.innerHTML = `${avatarEl()}
+      <div class="bg-[#E7EEFC] rounded-[16px] rounded-tl-sm px-4 py-3 max-w-[76%]">
+        <p class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px]">${escHtml(m.text)}</p>
+      </div>`;
+  } else if (m.type === "user") {
+    el.className = "flex justify-end";
+    el.innerHTML = `<div class="bg-[#0D57E2] rounded-[16px] rounded-tr-sm px-4 py-3 max-w-[76%]">
+      <p class="text-[14px] font-semibold text-white leading-[22px] tracking-[0.25px]">${escHtml(m.text)}</p>
+    </div>`;
+  } else { return null; }
+  return el;
+}
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 (function init() {
   appendBotBubble(`<p class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px]">
@@ -426,6 +665,114 @@ function escHtml(s) {
   </p>`);
   setTimeout(showMainMenu, 400);
 })();
+
+window.CONSOLE_PAGE = 'support';
 </script>
+<script src="proto-console.js"></script>
+<script>
+// ── support.html overrides ────────────────────────────────────────────────────
+window.consoleReset = function () {
+  flowState = null; currentChoiceBubble = null; olderPage = 0; loadingOld = false;
+  chatArea.innerHTML = '';
+  document.getElementById('older-hint')?.classList.remove('hidden');
+  resetToDefault();
+  appendBotBubble(`<p class="text-[14px] font-semibold text-[#4F4F4F] leading-[22px] tracking-[0.25px]">สวัสดีครับมีอะไรให้น้อง Muvmi ช่วยเหลือครับวันนี้</p>`);
+  setTimeout(showMainMenu, 400);
+  document.getElementById('c-panel').classList.add('hidden');
+};
+
+window.runScenario = function (idx) {
+  consoleReset();
+  const plays = [
+    () => { setTimeout(() => { appendUserBubble("แจ้งลืมของหรือสัมภาระ"); setTimeout(() => runLeaf(MENU[2]), 400); }, 700); },
+    () => { setTimeout(() => { appendUserBubble("ร้องเรียนพนักงาน"); setTimeout(() => { appendUserBubble("ขับรถอันตราย"); setTimeout(() => runLeaf(MENU[1].sub[1]), 400); }, 400); }, 700); },
+    () => { setTimeout(() => { appendUserBubble("ปัญหาการใช้แอป"); setTimeout(() => { appendUserBubble("ปัญหาการเติมเงิน"); setTimeout(() => runLeaf(MENU[0].sub[0]), 400); }, 400); }, 700); },
+  ];
+  plays[idx]?.();
+};
+</script>
+
+<!-- Comment overlay -->
+<div id="c-overlay" class="hidden"
+  style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:48;cursor:crosshair;"
+  onclick="handleCommentClick(event)"></div>
+
+<!-- Console FAB -->
+<button id="c-fab" onclick="toggleConsole()">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
+  </svg>
+  <span class="c-label">Console</span>
+</button>
+
+<!-- Console Panel -->
+<div id="c-panel" class="hidden overflow-hidden"
+  style="background:#1A1A2E;">
+
+  <!-- Header -->
+  <div style="padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:space-between;">
+    <span style="font-size:11px;font-weight:700;letter-spacing:0.6px;color:rgba(255,255,255,0.4);text-transform:uppercase;">Prototype Console</span>
+    <button onclick="toggleConsole()" style="background:none;border:none;color:rgba(255,255,255,0.35);cursor:pointer;font-size:15px;line-height:1;padding:0;">✕</button>
+  </div>
+
+  <!-- Comment -->
+  <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.08);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <span style="font-size:11px;font-weight:700;letter-spacing:0.5px;color:rgba(255,255,255,0.4);text-transform:uppercase;">Comment</span>
+      <span id="c-comment-count" class="hidden" style="font-size:10px;font-weight:800;background:#FBBF24;color:#000;border-radius:99px;padding:1px 7px;">0</span>
+    </div>
+    <button id="c-comment-btn" onclick="toggleCommentMode()"
+      style="width:100%;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.08);
+             border:none;border-radius:10px;padding:9px 12px;color:#fff;cursor:pointer;font-family:inherit;transition:background 0.15s;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      <span style="font-size:13px;font-weight:600;">Pin a comment</span>
+    </button>
+    <div id="c-comments-list" style="margin-top:6px;max-height:110px;overflow-y:auto;"></div>
+  </div>
+
+  <!-- State -->
+  <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.08);">
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.5px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:8px;">State</div>
+    <button onclick="consoleReset()"
+      style="width:100%;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.08);
+             border:none;border-radius:10px;padding:9px 12px;color:#fff;cursor:pointer;font-family:inherit;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.49"/>
+      </svg>
+      <span style="font-size:13px;font-weight:600;">Reset flow</span>
+    </button>
+  </div>
+
+  <!-- Pages -->
+  <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.08);">
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.5px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:8px;">Pages</div>
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      <a href="home.html"      style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.08);border-radius:10px;padding:8px 12px;color:#fff;text-decoration:none;font-size:13px;font-weight:600;">🏠 <span>Home</span></a>
+      <a href="index.html"     style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.08);border-radius:10px;padding:8px 12px;color:#fff;text-decoration:none;font-size:13px;font-weight:600;">💬 <span>Messages</span></a>
+      <a href="support.html"   style="display:flex;align-items:center;gap:8px;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.25);border-radius:10px;padding:8px 12px;color:#FCD34D;text-decoration:none;font-size:13px;font-weight:600;">🎧 <span>Support</span><span style="margin-left:auto;font-size:10px;opacity:0.5;">current</span></a>
+      <a href="trip-chat.html" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.08);border-radius:10px;padding:8px 12px;color:#fff;text-decoration:none;font-size:13px;font-weight:600;">🚌 <span>Trip Chat</span></a>
+      <a href="trip-map.html"  style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.08);border-radius:10px;padding:8px 12px;color:#fff;text-decoration:none;font-size:13px;font-weight:600;">🗺 <span>Trip Map</span></a>
+    </div>
+  </div>
+
+  <!-- Scenarios -->
+  <div style="padding:12px 16px;">
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.5px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:8px;">Scenarios</div>
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      <button onclick="runScenario(0)" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.08);border:none;border-radius:10px;padding:8px 12px;color:#fff;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;text-align:left;">
+        <span style="color:rgba(255,255,255,0.35);font-size:11px;">▶</span> ลืมของ
+      </button>
+      <button onclick="runScenario(1)" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.08);border:none;border-radius:10px;padding:8px 12px;color:#fff;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;text-align:left;">
+        <span style="color:rgba(255,255,255,0.35);font-size:11px;">▶</span> ร้องเรียน → ขับอันตราย
+      </button>
+      <button onclick="runScenario(2)" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.08);border:none;border-radius:10px;padding:8px 12px;color:#fff;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;text-align:left;">
+        <span style="color:rgba(255,255,255,0.35);font-size:11px;">▶</span> ปัญหาเติมเงิน
+      </button>
+    </div>
+  </div>
+
+</div>
 </body>
 </html>
